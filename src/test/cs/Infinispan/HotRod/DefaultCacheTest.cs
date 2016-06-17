@@ -2,7 +2,6 @@ using Infinispan.HotRod;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace Infinispan.HotRod.Tests
 {

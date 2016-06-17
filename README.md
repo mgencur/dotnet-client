@@ -31,13 +31,12 @@ Build steps:
     set NLOG_DLL=/path/to/nlog/2.1.0/dll
     set NUNIT_DLL=/path/to/nunit.framework.dll
     
-    set HOTRODCPP32_HOME=/path/to/native/32bit/client
-    set HOTRODCPP64_HOME=/path/to/native/64bit/client
+    set HOTRODCPP_HOME=/path/to/native/64bit/client
     
     set HOTROD_SNK=/path/to/key/to/be/generated
     sn.exe -k %HOTROD_SNK%
 
-    set JBOSS_HOME=/path/to/hotrod/standalone/server
+    set JBOSS_HOME=/path/to/hotrod/standalone/server 
 
 By default the build script will run the unit/integrations tests. If
 you want to disable them pass ENABLE_{JAVA,CSHARP}_TESTING=false as flags

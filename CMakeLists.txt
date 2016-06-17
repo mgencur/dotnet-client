@@ -239,11 +239,11 @@ if (WIN32)
 	                       TYPE AA8E36D7-FD51-4D63-A68E-227F5C4871C6
 			       GUID AA8E36D7-FD51-4D63-A68E-227F5C4871C6
 			       swig )
-  include_external_msproject(nativeTestSuite nativeTestSuite.csproj
-		                TYPE 97560E9D-C7BA-40D6-9728-B39B1333EF49
-				GUID 97560E9D-C7BA-40D6-9728-B39B1333EF49
-				PLATFORM ${PLATFORM}
-				vs-hotrodcs-bin)
+#  include_external_msproject(nativeTestSuite nativeTestSuite.csproj
+#		                TYPE 97560E9D-C7BA-40D6-9728-B39B1333EF49
+#				GUID 97560E9D-C7BA-40D6-9728-B39B1333EF49
+#				PLATFORM ${PLATFORM}
+#				vs-hotrodcs-bin)
   add_custom_target(hotrodcs-bin DEPENDS swig vs-hotrodcs-bin)
   include_external_msproject(vs-hotrodcs-test-bin hotrodcs-tests.csproj
 				TYPE 97560E9D-C7BA-40D6-9728-B39B1333EF49
@@ -409,6 +409,9 @@ if (NOT DEFINED ENABLE_JAVA_TESTING OR ENABLE_JAVA_TESTING)
 endif (NOT DEFINED ENABLE_JAVA_TESTING OR ENABLE_JAVA_TESTING)
 
 if (NOT DEFINED ENABLE_CSHARP_TESTING OR ENABLE_CSHARP_TESTING)
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/standalone-hotrod-ssl.xml DESTINATION "${JBOSS_HOME}/standalone/configuration")
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/truststore.jks DESTINATION "${JBOSS_HOME}/standalone/configuration")
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/keystore.jks DESTINATION "${JBOSS_HOME}/standalone/configuration")
   if (WIN32)
     # Pass the updated path using an external script.
     file (TO_NATIVE_PATH "${NUNIT_BINARY}" NUNIT_NATIVE_BINARY)

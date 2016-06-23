@@ -402,18 +402,19 @@ if (NOT DEFINED ENABLE_JAVA_TESTING OR ENABLE_JAVA_TESTING)
 endif (NOT DEFINED ENABLE_JAVA_TESTING OR ENABLE_JAVA_TESTING)
 
 if (NOT DEFINED ENABLE_CSHARP_TESTING OR ENABLE_CSHARP_TESTING)
-  file(COPY ${JBOSS_HOME}/docs/examples/configs/standalone-hotrod-ssl.xml DESTINATION "${JBOSS_HOME}/standalone/configuration")
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/standalone-hotrod-ssl.xml DESTINATION "${JBOSS_HOME}/standalone/configuration")
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/truststore_server.jks DESTINATION "${JBOSS_HOME}/standalone/configuration")
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/keystore_server.jks DESTINATION "${JBOSS_HOME}/standalone/configuration")
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/infinispan-ca.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin/${PLATFORM}/${CONFIGURATION})
   file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/client-ca.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin/${PLATFORM}/${CONFIGURATION})
+  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/src/test/resources/malicious.pem DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bin/${PLATFORM}/${CONFIGURATION})
   
   if (WIN32)
     # Pass the updated path using an external script.
     file (TO_NATIVE_PATH "${NUNIT_BINARY}" NUNIT_NATIVE_BINARY)
     configure_file(templates/nunit.bat.in nunit.bat)
 
-    add_test(NAME csharp_tests_default COMMAND nunit.bat bin/${PLATFORM}/$<CONFIG>/ Infinispan.HotRod.TestSuites.DefaultTestSuite TestResult-default.xml)
+    #add_test(NAME csharp_tests_default COMMAND nunit.bat bin/${PLATFORM}/$<CONFIG>/ Infinispan.HotRod.TestSuites.DefaultTestSuite TestResult-default.xml)
 	add_test(NAME csharp_tests_security COMMAND nunit.bat bin/${PLATFORM}/$<CONFIG>/ Infinispan.HotRod.TestSuites.SecurityTestSuite TestResult-security.xml)
   else (WIN32)
 	add_test(csharp_unittests ${MONO_BINARY} ${NUNIT_BINARY} hotrodcs-tests.dll)

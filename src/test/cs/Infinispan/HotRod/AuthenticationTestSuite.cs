@@ -28,7 +28,9 @@ namespace Infinispan.HotRod.TestSuites
             get
             {
                 var suite = new ArrayList();
-                suite.Add(new AuthenticationTest());
+                //suite.Add(new AuthenticationTest());
+                suite.Add(new AuthPlainTest());
+                //suite.Add(new AuthDigestTest());
                 return suite;
             }
         }

@@ -111,30 +111,27 @@ namespace Infinispan.HotRod.Tests
         [Test]
         public void WriterPerformsSupervisorOpsTest()
         {
-            //AssertError(writerCache, cache => TestPutClear(cache));
-            //AssertError(writerCache, cache => TestPutClearAsync(cache));
-            //AssertError(writerCache, cache => TestPutContains(cache));
-            //AssertError(writerCache, cache => TestPutGetAsync(cache));
-
-            //--- Clear operation in PutAll blocks with these five operations
-            // AssertError(writerCache, cache => TestPutGet(cache));
-            // AssertError(writerCache, cache => TestPutGetBulk(cache));
-            // AssertError(writerCache, cache => TestPutGetVersioned(cache));
-            // AssertError(writerCache, cache => TestPutGetWithMetadata(cache));
-            // AssertError(writerCache, cache => TestPutAll(cache));
-
-            //AssertError(writerCache, cache => TestPutAllAsync(cache));
-            //AssertError(writerCache, cache => TestPutIfAbsent(cache));
-            //AssertError(writerCache, cache => TestPutIfAbsentAsync(cache));
-            //AssertError(writerCache, cache => TestPutRemoveContains(cache));
-            //AssertError(writerCache, cache => TestPutRemoveAsyncContains(cache));
-            //AssertError(writerCache, cache => TestPutRemoveWithVersion(cache));
-            //AssertError(writerCache, cache => TestPutRemoveWithVersionAsync(cache));
-            //AssertError(writerCache, cache => TestPutReplaceWithFlag(cache));
-            //AssertError(writerCache, cache => TestPutReplaceWithVersion(cache));
-            //AssertError(writerCache, cache => TestPutReplaceWithVersionAsync(cache));
-            //AssertError(writerCache, cache => TestPutSize(cache));
-            //AssertError(writerCache, cache => TestRemoteTaskExec(cache));
+            AssertError(writerCache, cache => TestPutClear(cache));
+            AssertError(writerCache, cache => TestPutClearAsync(cache));
+            AssertError(writerCache, cache => TestPutContains(cache));
+            AssertError(writerCache, cache => TestPutGet(cache));
+            AssertError(writerCache, cache => TestPutGetAsync(cache));
+            AssertError(writerCache, cache => TestPutGetBulk(cache));
+            AssertError(writerCache, cache => TestPutGetVersioned(cache));
+            AssertError(writerCache, cache => TestPutGetWithMetadata(cache));
+            AssertError(writerCache, cache => TestPutAll(cache));
+            AssertError(writerCache, cache => TestPutAllAsync(cache));
+            AssertError(writerCache, cache => TestPutIfAbsent(cache));
+            AssertError(writerCache, cache => TestPutIfAbsentAsync(cache));
+            AssertError(writerCache, cache => TestPutRemoveContains(cache));
+            AssertError(writerCache, cache => TestPutRemoveAsyncContains(cache));
+            AssertError(writerCache, cache => TestPutRemoveWithVersion(cache));
+            AssertError(writerCache, cache => TestPutRemoveWithVersionAsync(cache));
+            AssertError(writerCache, cache => TestPutReplaceWithFlag(cache));
+            AssertError(writerCache, cache => TestPutReplaceWithVersion(cache));
+            AssertError(writerCache, cache => TestPutReplaceWithVersionAsync(cache));
+            AssertError(writerCache, cache => TestPutSize(cache));
+            AssertError(writerCache, cache => TestRemoteTaskExec(cache));
         }
 
         [Test]
@@ -295,7 +292,6 @@ namespace Infinispan.HotRod.Tests
 
         protected void TestPutGetVersioned(IRemoteCache<string, string> cache)
         {
-            cache.Clear();
             cache.Put(K1, V1);
             IVersionedValue<string> value = cache.GetVersioned(K1);
             Assert.AreEqual(V1, value.GetValue());

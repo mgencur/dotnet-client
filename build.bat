@@ -27,7 +27,7 @@ cmake --build . --config RelWithDebInfo
 if %errorlevel% neq 0 goto fail
 
 if  not "%buildTest%"=="skip" ( 
-ctest -V -C RelWithDebInfo
+ctest -V -C RelWithDebInfo -I 4
 )
 if %errorlevel% neq 0 goto fail
 

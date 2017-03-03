@@ -29,6 +29,11 @@ namespace Infinispan.HotRod.Tests
 
         public abstract string GetMech();
 
+        public virtual string GetServerName()
+        {
+            return "node0";
+        }
+
         [TestFixtureSetUp]
         public void BeforeClass()
         {
@@ -57,6 +62,7 @@ namespace Infinispan.HotRod.Tests
             conf.Security().Authentication()
                                 .Enable()
                                 .SaslMechanism(GetMech())
+                                .ServerFQDN(GetServerName())
                                 .SetupCallback(cbMap);
             marshaller = new JBasicMarshaller();
             conf.Marshaller(marshaller);

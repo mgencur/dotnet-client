@@ -7,19 +7,25 @@ namespace Infinispan.HotRod.TestSuites
 {
     public class AuthenticationTestSuite
     {
-        HotRodServer server;
+        HotRodServer server1;
+        HotRodServer server2;
 
         [TestFixtureSetUp]
         public void BeforeSuite()
         {
-            server = new HotRodServer("standalone-sasl-cs.xml");
-            server.StartHotRodServer();
+            server1 = new HotRodServer("clustered-sasl-cs.xml");
+            server1.StartHotRodServer();
+            server2 = new HotRodServer("clustered-sasl-cs.xml", "-Djboss.socket.binding.port-offset=100 -Dserver.name=node1", 11322);
+            server2.StartHotRodServer();
         }
 
         [TestFixtureTearDown]
         public void AfterSuite()
         {
-            server.ShutDownHotrodServer();
+            if (server1.IsRunning(2000))
+                server1.ShutDownHotrodServer();
+            if (server2.IsRunning(2000))
+                server2.ShutDownHotrodServer();
         }
 
         [Suite]
@@ -28,8 +34,9 @@ namespace Infinispan.HotRod.TestSuites
             get
             {
                 var suite = new ArrayList();
-                //suite.Add(new AuthenticationTest());
+                suite.Add(new AuthenticationTest());
                 suite.Add(new AuthPlainTest());
+                //disabled due to HRCPP-386
                 //suite.Add(new AuthDigestTest());
                 return suite;
             }

@@ -11,6 +11,7 @@ namespace Infinispan.HotRod.Tests
         public const string HOTROD_HOST = "127.0.0.1";
         public const int HOTROD_PORT = 11222;
         public const string AUTH_CACHE = "authCache";
+        public const string PROTOBUF_SCRIPT_CACHE_NAME = "___script_cache";
         public const string REALM = "ApplicationRealm";
         public const string K1 = "k1";
         public const string V1 = "v1";
@@ -22,6 +23,9 @@ namespace Infinispan.HotRod.Tests
         protected IRemoteCache<String, String> writerCache;
         protected IRemoteCache<String, String> supervisorCache;
         protected IRemoteCache<String, String> adminCache;
+        protected IRemoteCache<String, String> scriptCache;
+
+        protected IMarshaller marshaller;
 
         public abstract string GetMech();
 
@@ -32,9 +36,10 @@ namespace Infinispan.HotRod.Tests
             writerCache = InitCache("writer", "somePassword");
             supervisorCache = InitCache("supervisor", "lessStrongPassword");
             adminCache = InitCache("admin", "strongPassword");
+            scriptCache = InitCache("admin", "strongPassword", PROTOBUF_SCRIPT_CACHE_NAME);
         }
 
-        protected IRemoteCache<String, String> InitCache(string user, string password)
+        protected IRemoteCache<String, String> InitCache(string user, string password, string cacheName = AUTH_CACHE)
         {
             ConfigurationBuilder conf = new ConfigurationBuilder();
             conf.AddServer()
@@ -53,10 +58,11 @@ namespace Infinispan.HotRod.Tests
                                 .Enable()
                                 .SaslMechanism(GetMech())
                                 .SetupCallback(cbMap);
-            conf.Marshaller(new JBasicMarshaller());
+            marshaller = new JBasicMarshaller();
+            conf.Marshaller(marshaller);
             Configuration c = conf.Build();
             RemoteCacheManager remoteManager = new RemoteCacheManager(c, true);
-            IRemoteCache<string, string> authCache = remoteManager.GetCache<string, string>(AUTH_CACHE);
+            IRemoteCache<string, string> authCache = remoteManager.GetCache<string, string>(cacheName);
             return authCache;
         }
 
@@ -99,7 +105,30 @@ namespace Infinispan.HotRod.Tests
         [Test]
         public void WriterPerformsSupervisorOpsTest()
         {
-            AssertError(writerCache, cache => TestCommonSupervisorAdminOps(cache));
+            //AssertError(writerCache, cache => TestPutClear(cache));
+            //AssertError(writerCache, cache => TestPutClearAsync(cache));
+            //AssertError(writerCache, cache => TestPutContains(cache));
+            //AssertError(writerCache, cache => TestPutGetAsync(cache));
+
+            //--- Clear operation in PutAll blocks with these five operations
+            // AssertError(writerCache, cache => TestPutGet(cache));
+            // AssertError(writerCache, cache => TestPutGetBulk(cache));
+            // AssertError(writerCache, cache => TestPutGetVersioned(cache));
+            // AssertError(writerCache, cache => TestPutGetWithMetadata(cache));
+            // AssertError(writerCache, cache => TestPutAll(cache));
+
+            //AssertError(writerCache, cache => TestPutAllAsync(cache));
+            //AssertError(writerCache, cache => TestPutIfAbsent(cache));
+            //AssertError(writerCache, cache => TestPutIfAbsentAsync(cache));
+            //AssertError(writerCache, cache => TestPutRemoveContains(cache));
+            //AssertError(writerCache, cache => TestPutRemoveAsyncContains(cache));
+            //AssertError(writerCache, cache => TestPutRemoveWithVersion(cache));
+            //AssertError(writerCache, cache => TestPutRemoveWithVersionAsync(cache));
+            //AssertError(writerCache, cache => TestPutReplaceWithFlag(cache));
+            //AssertError(writerCache, cache => TestPutReplaceWithVersion(cache));
+            //AssertError(writerCache, cache => TestPutReplaceWithVersionAsync(cache));
+            //AssertError(writerCache, cache => TestPutSize(cache));
+            //AssertError(writerCache, cache => TestRemoteTaskExec(cache));
         }
 
         [Test]
@@ -112,8 +141,8 @@ namespace Infinispan.HotRod.Tests
         public void SupervisorPerformsAdminOpsTest()
         {
             AssertError(supervisorCache, cache => TestStats(cache));
-            //throws Exception instead HotRodClientException
-            AssertError(supervisorCache, cache => TestAddRemoveListener(cache));
+            //see HRCPP-384
+            //AssertError(supervisorCache, cache => TestAddRemoveListener(cache));
         }
 
         [Test]
@@ -122,6 +151,7 @@ namespace Infinispan.HotRod.Tests
             TestCommonSupervisorAdminOps(adminCache);
             TestStats(adminCache);
             TestAddRemoveListener(adminCache);
+            TestPutKeySet(adminCache);
         }
 
         private void TestCommonSupervisorAdminOps(IRemoteCache<string, string> cache)
@@ -146,7 +176,9 @@ namespace Infinispan.HotRod.Tests
             TestPutReplaceWithVersion(cache);
             TestPutReplaceWithVersionAsync(cache);
             TestPutSize(cache);
-            //TestPutKeySet(cache); - bug? requires ADMIN
+            TestRemoteTaskExec(cache);
+            //see ISPN-8059 - test this only for Admin user
+            //TestPutKeySet(cache);
         }
 
         private void AssertError(IRemoteCache<String, String> cache, Action<IRemoteCache<String, String>> f)
@@ -427,6 +459,21 @@ namespace Infinispan.HotRod.Tests
                     cache.RemoveClientListener(cl);
                 }
             }
+        }
+
+        public void TestRemoteTaskExec(IRemoteCache<string, string> cache)
+        {
+            string scriptName = "script.js";
+            string script = "//mode=local,language=javascript\n "
+                            + "cache.put(\"k1\", value);\n"
+                            + "cache.get(\"k1\");\n";
+            scriptCache.Put(scriptName, script);
+            Dictionary<string, string> scriptArgs = new Dictionary<string, string>();
+            byte[] bvalue = marshaller.ObjectToByteBuffer("v1");
+            string svalue = System.Text.Encoding.UTF8.GetString(bvalue);
+            scriptArgs.Add("value", svalue);
+            byte[] ret1 = cache.Execute(scriptName, scriptArgs);
+            Assert.AreEqual("v1", marshaller.ObjectFromByteBuffer(ret1));
         }
     }
 }

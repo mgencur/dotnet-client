@@ -1,6 +1,7 @@
 ﻿using Infinispan.HotRod.Config;
 using Infinispan.HotRod.Tests.Util;
 using NUnit.Framework;
+using System.Collections.Generic;
 
 namespace Infinispan.HotRod.Tests
 {
@@ -8,7 +9,7 @@ namespace Infinispan.HotRod.Tests
     {
         RemoteCacheManager remoteManager;
         const string ERRORS_KEY_SUFFIX = ".errors";
-        const string PROTOBUF_SCRIPT_CACHE_NAME = "___script_cache";
+        const string SCRIPT_CACHE_NAME = "___script_cache";
         static IMarshaller marshaller;
 
         [TestFixtureSetUp]
@@ -201,6 +202,45 @@ namespace Infinispan.HotRod.Tests
                     cache.RemoveClientListener(cl);
                 }
             }
+        }
+
+        [Test]
+        public void TaskExecPutGetWithListener()
+        {
+            LoggingEventListener<string> listener = new LoggingEventListener<string>();
+            IRemoteCache<string, string> testCache = remoteManager.GetCache<string, string>();
+            IRemoteCache<string, string> scriptCache = remoteManager.GetCache<string, string>(SCRIPT_CACHE_NAME);
+            Event.ClientListener<string, string> cl = new Event.ClientListener<string, string>();
+            const string scriptName = "put-get.js";
+            ScriptUtils.LoadScriptCache(scriptCache, scriptName, scriptName);
+            try
+            {
+                testCache.Clear();
+                cl.filterFactoryName = "";
+                cl.converterFactoryName = "";
+                cl.AddListener(listener.CreatedEventAction);
+                testCache.AddClientListener(cl, new string[] { }, new string[] { }, null);
+                AssertNoEvents(listener);
+                Dictionary<string, string> scriptArgs = new Dictionary<string, string>();
+                scriptArgs.Add("k", Marshall("mykey"));
+                scriptArgs.Add("v", Marshall("myvalue"));
+                byte[] v = testCache.Execute(scriptName, scriptArgs);
+                Assert.AreEqual("myvalue", marshaller.ObjectFromByteBuffer(v));
+                AssertOnlyCreated(Marshall("mykey"), listener);
+            }
+            finally
+            {
+                if (cl.listenerId != null)
+                {
+                    testCache.RemoveClientListener(cl);
+                }
+            }
+        }
+
+        private string Marshall(string v)
+        {
+            byte[] bv = marshaller.ObjectToByteBuffer(v);
+            return System.Text.Encoding.UTF8.GetString(bv);
         }
 
         private void AssertNoEvents(LoggingEventListener<string> listener)

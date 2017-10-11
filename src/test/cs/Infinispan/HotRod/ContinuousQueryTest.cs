@@ -1,22 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using Infinispan.HotRod.Exceptions;
 using Infinispan.HotRod.Config;
+using Infinispan.HotRod.Exceptions;
 using Org.Infinispan.Query.Remote.Client;
 using System.IO;
 using Org.Infinispan.Protostream;
 using SampleBankAccount;
 using NUnit.Framework;
 using System.Threading;
-using Infinispan.Hotrod.Protobuf;
-using System.Collections.ObjectModel;
 
 /**
- * Known issues: HRCPP-301, HRCPP-302
- * 
- * No queries use sorting because of HRCPP-301.
- * No queries use pagination as JPQL itself does not support it.
  * 
  */
 namespace Infinispan.HotRod.Tests
@@ -123,14 +116,14 @@ namespace Infinispan.HotRod.Tests
                 Console.WriteLine("fail: error in registering .proto model");
                 Environment.Exit(-1);
             }
-
-            IRemoteCache<int, User> userCache = remoteManager.GetCache<int, User>(NAMED_CACHE);
         }
+
         [TestFixtureTearDown]
         public void AfterClass()
         {
             remoteManager.Stop();
         }
+
         [Test]
         public void EntityBasicContQueryTest()
         {
@@ -141,8 +134,6 @@ namespace Infinispan.HotRod.Tests
                 userCache.Clear();
                 Semaphore s = new Semaphore(0, 1);
                 QueryRequest qr = new QueryRequest();
-                // JpqlString will be deprecated please use QueryString
-                // qr.JpqlString = "from sample_bank_account.User";
                 qr.QueryString = "from sample_bank_account.User";
 
                 Event.ContinuousQueryListener<int, User> cql = new Event.ContinuousQueryListener<int, User>(qr.QueryString);
@@ -169,6 +160,100 @@ namespace Infinispan.HotRod.Tests
             Assert.AreEqual(1, updated);
             Assert.AreEqual(1, leaved);
         }
+
+        [Test]
+        public void ExpirationContQueryTest()
+        {
+            int joined = 0, updated = 0, left = 0;
+            bool receivedSignal = false;
+            IRemoteCache<int, User> userCache = remoteManager.GetCache<int, User>(NAMED_CACHE);
+            try
+            {
+                userCache.Clear();
+                Semaphore s = new Semaphore(0, 1);
+                QueryRequest qr = new QueryRequest();
+                qr.QueryString = "from sample_bank_account.User";
+                Event.ContinuousQueryListener<int, User> cql = new Event.ContinuousQueryListener<int, User>(qr.QueryString);
+                cql.JoiningCallback = (int k, User v) => { joined++; };
+                cql.LeavingCallback = (int k, User v) => { left++; s.Release(); };
+                cql.UpdatedCallback = (int k, User v) => { updated++; };
+                userCache.AddContinuousQueryListener(cql);
+                User u1 = CreateUser1(userCache);
+                userCache.Put(1, u1, 200, TimeUnit.MILLISECONDS);
+                receivedSignal = s.WaitOne(10000);
+                userCache.RemoveContinuousQueryListener(cql);
+                userCache.Clear();
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            Assert.IsNull(userCache.Get(1));
+            Assert.IsTrue(receivedSignal, "Timed out waiting for left members");
+            Assert.AreEqual(1, joined, "Joined counter failure");
+            Assert.AreEqual(0, updated, "Updated counter failure");
+            Assert.AreEqual(1, left, "Left counter failure");
+        }
+
+        [Test]
+        [ExpectedException(typeof(HotRodClientException))]
+        public void ExceptionOnGroupingAndAggregationTest()
+        {
+            IRemoteCache<int, User> userCache = remoteManager.GetCache<int, User>(NAMED_CACHE);
+            QueryRequest qr = new QueryRequest();
+            qr.QueryString = "select max(u.age) from sample_bank_account.User u where u.age >= 20";
+            Event.ContinuousQueryListener<int, User> cql = new Event.ContinuousQueryListener<int, User>(qr.QueryString);
+            userCache.AddContinuousQueryListener(cql);
+        }
+
+        [Test]
+        public void ParameterizedQueryUpdateTest()
+        {
+            int joined = 0, updated = 0, leaved = 0;
+            try
+            {
+                IRemoteCache<int, User> userCache = remoteManager.GetCache<int, User>(NAMED_CACHE);
+                userCache.Clear();
+                Semaphore s = new Semaphore(0, 1);
+                QueryRequest qr = new QueryRequest();
+                QueryRequest.Types.NamedParameter param = new QueryRequest.Types.NamedParameter();
+                qr.QueryString = "from sample_bank_account.User u where u.age <= :ageParam";
+
+                WrappedMessage wm = new WrappedMessage();
+                wm.WrappedInt32 = 26; //set age that matches just one user
+                param.Name = "ageParam";
+                param.Value = wm;
+                qr.NamedParameters.Add(param);
+
+                Event.ContinuousQueryListener<int, User> cql = new Event.ContinuousQueryListener<int, User>(qr.QueryString);
+                cql.JoiningCallback = (int k, User v) => { joined++; };
+                cql.LeavingCallback = (int k, User v) => { leaved++; s.Release(); };
+                cql.UpdatedCallback = (int k, User v) => { updated++; };
+                userCache.AddContinuousQueryListener(cql);
+                User u1 = CreateUser1(userCache);
+                User u2 = CreateUser2(userCache);
+                userCache.Put(1, u1);
+                userCache.Put(2, u2);
+                s.WaitOne(10000);
+                Assert.AreEqual(1, joined); //only one user matches the query
+                Assert.AreEqual(0, updated);
+                Assert.AreEqual(0, leaved);
+                userCache.RemoveContinuousQueryListener(cql);
+                joined = 0; leaved = 0; updated = 0;
+                wm.WrappedInt32 = 30; //set age that matches two users
+                userCache.AddContinuousQueryListener(cql);
+                s.WaitOne(10000);
+                Assert.AreEqual(2, joined); //now both users should match the query
+                Assert.AreEqual(0, updated);
+                Assert.AreEqual(0, leaved);
+                userCache.Clear();
+            }
+            catch (System.Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+
         [Test]
         public void ProjectionBasicContQueryTest()
         {
@@ -226,6 +311,7 @@ namespace Infinispan.HotRod.Tests
             user1.Name = "Tom";
             user1.Surname = "Cat";
             user1.Gender = User.Types.Gender.FEMALE;
+            user1.Age = 25;
             User.Types.Address address1 = new User.Types.Address();
             address1.Street = "Via Roma";
             address1.PostCode = "202020";
@@ -243,6 +329,7 @@ namespace Infinispan.HotRod.Tests
             user2.Name = "Spider";
             user2.Surname = "Man";
             user2.Gender = User.Types.Gender.MALE;
+            user2.Age = 30;
             List<Int32> accountIds = new List<Int32>();
             accountIds.Add(3);
             user2.AccountIds.Add(accountIds);
